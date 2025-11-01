@@ -16,7 +16,7 @@ declare module "react-syntax-highlighter" {
   export const SyntaxHighlighter: typeof Prism;
 }
 
-declare module "react-syntax-highlighter/dist/esm/styles/prism" {
+declare module "react-syntax-highlighter/dist/cjs/styles/prism" {
   export const oneDark: any;
   export const oneLight: any;
   export const atomDark: any;

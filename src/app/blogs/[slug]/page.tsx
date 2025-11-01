@@ -7,7 +7,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 
 import { FaTwitter, FaLinkedin, FaLink } from "react-icons/fa";
 import { toast } from "react-hot-toast";
