@@ -7,6 +7,8 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+
 import { FaTwitter, FaLinkedin, FaLink } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 
@@ -191,7 +193,12 @@ export default function BlogPostPage() {
             code({ inline, className, children, ...props }: any) {
               const match = /language-(\w+)/.exec(className || "");
               return !inline && match ? (
-                <SyntaxHighlighter language={match[1]} PreTag="div" {...props}>
+                <SyntaxHighlighter
+                  style={oneDark}
+                  language={match[1]}
+                  PreTag="div"
+                  {...props}
+                >
                   {String(children).replace(/\n$/, "")}
                 </SyntaxHighlighter>
               ) : (
