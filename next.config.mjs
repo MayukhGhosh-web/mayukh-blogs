@@ -8,6 +8,11 @@ const nextConfig = {
         pathname: "/**",
       },
       {
+        protocol: "https",
+        hostname: "honorable-breeze-55074c763a.media.strapiapp.com", // ✅ Added Strapi media domain
+        pathname: "/**",
+      },
+      {
         protocol: "http",
         hostname: "localhost",
         pathname: "/**",

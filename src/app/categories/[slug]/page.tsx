@@ -4,38 +4,23 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useTheme } from "@/components/ui/ThemeContext"; // ✅ Import theme context
-
-type RawBlog = any;
+import { useTheme } from "@/components/ui/ThemeContext";
 
 interface BlogPost {
   id?: number | string;
-  attributes?: {
-    title?: string;
-    slug?: string;
-    excerpt?: string;
-    cover?: {
-      data?: {
-        attributes?: {
-          url?: string;
-        };
-      };
-    };
-  };
   title?: string;
   slug?: string;
-  excerpt?: string;
+  description?: string;
   cover?: { url?: string };
 }
 
 const CategoryPage: React.FC = () => {
   const { slug } = useParams();
-  const { theme } = useTheme(); // ✅ detect current theme
+  const { theme } = useTheme();
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [categoryName, setCategoryName] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
-  // ✅ Always use environment-based backend URL
   const STRAPI_URL =
     process.env.NEXT_PUBLIC_STRAPI_URL ||
     "https://honorable-breeze-55074c763a.strapiapp.com";
@@ -45,25 +30,45 @@ const CategoryPage: React.FC = () => {
 
     const fetchCategoryBlogs = async () => {
       try {
-        const res = await fetch(
-          `${STRAPI_URL}/api/categories?filters[slug][$eq]=${slug}&populate[blogs][populate]=cover`,
-          { next: { revalidate: 60 } } // cache hint
-        );
+        // ✅ Populate blogs and their cover images
+        const apiUrl = `${STRAPI_URL.replace(
+          /\/$/,
+          ""
+        )}/api/categories?filters[slug][$eq]=${slug}&populate[blogs][populate][0]=cover`;
 
-        const json = await res.json();
-        const categoryData = json.data?.[0];
+        console.log("Fetching:", apiUrl);
 
-        if (categoryData) {
-          const attrs = categoryData.attributes ?? categoryData;
-          setCategoryName(attrs.name ?? "Untitled Category");
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        });
 
-          const blogsData = attrs.blogs?.data ?? attrs.blogs ?? [];
-          setBlogs(Array.isArray(blogsData) ? blogsData : []);
-        } else {
-          console.warn("No category found for slug:", slug);
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        console.log("Category response:", json);
+
+        const categoryData = json?.data?.[0];
+
+        if (!categoryData) {
           setCategoryName("Category not found");
           setBlogs([]);
+          return;
         }
+
+        setCategoryName(categoryData.name ?? "Untitled Category");
+
+        // ✅ Extract blogs safely
+        const blogsData = Array.isArray(categoryData.blogs)
+          ? categoryData.blogs
+          : [];
+
+        setBlogs(blogsData);
       } catch (error) {
         console.error("Error fetching category blogs:", error);
         setCategoryName("Error loading category");
@@ -74,7 +79,7 @@ const CategoryPage: React.FC = () => {
     };
 
     fetchCategoryBlogs();
-  }, [slug, STRAPI_URL]);
+  }, [slug]);
 
   if (loading) {
     return (
@@ -99,7 +104,7 @@ const CategoryPage: React.FC = () => {
       }`}
     >
       <div className="max-w-5xl mx-auto px-4 py-8">
-        {/* --- Stylish Category Heading --- */}
+        {/* --- Category Title --- */}
         <h1
           className="text-5xl font-extrabold text-center mb-12 tracking-widest"
           style={{
@@ -114,19 +119,19 @@ const CategoryPage: React.FC = () => {
 
         {/* --- Blogs Grid --- */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {blogs.map((blog: BlogPost | RawBlog) => {
-            const attrs = (blog.attributes ?? blog) as any;
-            const key = blog.id ?? attrs.slug ?? Math.random().toString(36).slice(2, 9);
+          {blogs.map((blog) => {
+            const key = blog.id ?? blog.slug ?? Math.random().toString(36).slice(2, 9);
+            const title = blog.title ?? "Untitled Blog";
+            const slugToUse = blog.slug ?? "";
+            const description = blog.description ?? "Read more...";
 
-            // ✅ Fixed image URL construction
-            const coverPath =
-              attrs?.cover?.data?.attributes?.url || attrs?.cover?.url || "";
-            const coverUrl = coverPath
-              ? `${STRAPI_URL}${coverPath}`
-              : null;
-
-            const title = attrs?.title ?? "Untitled Blog";
-            const slugToUse = attrs?.slug ?? "";
+            const rawUrl = blog.cover?.url || "";
+            const coverUrl =
+              rawUrl && rawUrl.startsWith("http")
+                ? rawUrl
+                : rawUrl
+                ? `${STRAPI_URL.replace(/\/$/, "")}${rawUrl}`
+                : "";
 
             return (
               <Link
@@ -153,7 +158,7 @@ const CategoryPage: React.FC = () => {
                     {title}
                   </h2>
                   <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">
-                    {attrs?.excerpt ?? "Read more..."}
+                    {description}
                   </p>
                 </div>
               </Link>

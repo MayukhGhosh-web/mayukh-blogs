@@ -7,7 +7,9 @@ import { FaSearch, FaTimes, FaBars, FaChevronDown } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "@/components/ui/ThemeToggle";
-import { useTheme } from "@/components/ui/ThemeContext"; // ✅ To detect light/dark mode
+import { useTheme } from "@/components/ui/ThemeContext";
+
+const STRAPI_BASE_URL = "https://honorable-breeze-55074c763a.strapiapp.com";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -16,21 +18,27 @@ const Navbar = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
-  const { theme } = useTheme(); // ✅ Get current theme
-
-  const categoryRef = useRef<HTMLDivElement>(null); // ✅ Ref for dropdown container
+  const { theme } = useTheme();
+  const categoryRef = useRef<HTMLDivElement>(null);
 
   // ✅ Fetch categories from Strapi
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch("https://honorable-breeze-55074c763a.strapiapp.com");
+        const res = await fetch(`${STRAPI_BASE_URL}/api/categories?populate=*`, {
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+
         const data = await res.json();
         setCategories(data.data || []);
       } catch (error) {
         console.error("Error fetching categories:", error);
+        setCategories([]); // fallback
       }
     };
+
     fetchCategories();
   }, []);
 
@@ -66,7 +74,7 @@ const Navbar = () => {
   return (
     <header className="bg-white text-gray-800 dark:bg-gray-900 dark:text-gray-100 border-b border-gray-300 dark:border-gray-700 transition-colors duration-300">
       <div className="max-w-5xl mx-auto flex items-center justify-between p-4">
-        {/* ✅ Logo (Light/Dark Switch) */}
+        {/* ✅ Logo */}
         <Link href="/" className="flex items-center space-x-2">
           <div
             className={`rounded-xl overflow-hidden border transition-all duration-300 ${
@@ -137,12 +145,10 @@ const Navbar = () => {
             </AnimatePresence>
           </div>
 
-          {/* Search & Theme Toggle */}
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSearchOpen((prev) => !prev)}
               className="text-xl hover:text-red-400 transition-colors"
-              aria-label="Open Search"
             >
               <FaSearch />
             </button>
@@ -179,7 +185,6 @@ const Navbar = () => {
               Blogs
             </Link>
 
-            {/* Mobile Categories */}
             <div>
               <button
                 onClick={() => setCategoryOpen((prev) => !prev)}
@@ -203,19 +208,22 @@ const Navbar = () => {
                     className="ml-4 mt-2 flex flex-col gap-1"
                   >
                     {categories.length > 0 ? (
-                      categories.map((cat) => (
-                        <Link
-                          key={cat.id}
-                          href={`/categories/${cat.attributes.slug}`}
-                          onClick={() => {
-                            setMenuOpen(false);
-                            setCategoryOpen(false);
-                          }}
-                          className="hover:text-red-400 transition-colors"
-                        >
-                          {cat.attributes.name}
-                        </Link>
-                      ))
+                      categories.map((cat) => {
+                        const attrs = cat.attributes ?? cat;
+                        return (
+                          <Link
+                            key={cat.id ?? attrs.slug}
+                            href={`/categories/${attrs.slug}`}
+                            onClick={() => {
+                              setMenuOpen(false);
+                              setCategoryOpen(false);
+                            }}
+                            className="hover:text-red-400 transition-colors"
+                          >
+                            {attrs.name}
+                          </Link>
+                        );
+                      })
                     ) : (
                       <p className="text-gray-400 text-sm">No categories</p>
                     )}
@@ -278,7 +286,6 @@ const Navbar = () => {
         )}
       </AnimatePresence>
 
-      {/* ✅ Short (Unfinished) Bottom Line */}
       <div className="h-0.5 bg-black dark:bg-white w-[80%] mx-auto rounded-full opacity-70"></div>
     </header>
   );

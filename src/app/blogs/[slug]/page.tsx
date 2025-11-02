@@ -42,8 +42,17 @@ export default function BlogPostPage() {
       setError(null);
 
       try {
-        const base = process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337";
-        const res = await fetch(`${base}/api/blogs?populate=*`);
+        const base =
+          process.env.NEXT_PUBLIC_STRAPI_URL ||
+          "https://honorable-breeze-55074c763a.strapiapp.com";
+
+        const res = await fetch(`${base}/api/blogs?populate=*`, {
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
         if (!res.ok) throw new Error(`Fetch failed: ${res.status} ${res.statusText}`);
         const json = await res.json();
 
@@ -63,7 +72,8 @@ export default function BlogPostPage() {
           return;
         }
 
-        const coverUrlRaw = raw.cover?.data?.attributes?.url ?? raw.cover?.url ?? raw.coverUrl;
+        const coverUrlRaw =
+          raw.cover?.data?.attributes?.url ?? raw.cover?.url ?? raw.coverUrl;
         const coverUrl =
           coverUrlRaw && typeof coverUrlRaw === "string"
             ? coverUrlRaw.startsWith("http")
@@ -73,7 +83,9 @@ export default function BlogPostPage() {
 
         let categories: string[] | undefined;
         if (Array.isArray(raw.categories?.data)) {
-          categories = raw.categories.data.map((c: any) => c.attributes?.name ?? c.name);
+          categories = raw.categories.data.map(
+            (c: any) => c.attributes?.name ?? c.name
+          );
         }
 
         const normalized: BlogPost = {
@@ -104,9 +116,13 @@ export default function BlogPostPage() {
     try {
       if (platform === "twitter") {
         const text = encodeURIComponent(post?.title ?? "");
-        window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`);
+        window.open(
+          `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`
+        );
       } else if (platform === "linkedin") {
-        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`);
+        window.open(
+          `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`
+        );
       } else {
         navigator.clipboard.writeText(url);
         toast.success("Link copied to clipboard!");
@@ -127,13 +143,17 @@ export default function BlogPostPage() {
     return (
       <div className="text-center text-red-500 mt-20">
         <p>{error}</p>
-        <button onClick={() => router.push("/")} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">
+        <button
+          onClick={() => router.push("/")}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+        >
           Go Back
         </button>
       </div>
     );
 
-  if (!post) return <div className="text-center mt-20 text-gray-500">Post not found 😕</div>;
+  if (!post)
+    return <div className="text-center mt-20 text-gray-500">Post not found 😕</div>;
 
   return (
     <div className="max-w-4xl mx-auto pb-16">
@@ -141,10 +161,28 @@ export default function BlogPostPage() {
       <div className="mt-12 px-4 text-center">
         <h1 className="text-4xl font-extrabold mb-2 text-gray-900">{post.title}</h1>
         <div className="text-sm text-gray-500 flex justify-center gap-4">
-          {post.createdAt && <span>📅 {new Date(post.createdAt).toLocaleDateString()}</span>}
-          <span>⏱️ {Math.ceil((post.content?.split(" ").length || 0) / 200)} min read</span>
+          {post.createdAt && (
+            <span>📅 {new Date(post.createdAt).toLocaleDateString()}</span>
+          )}
+          <span>
+            ⏱️ {Math.ceil((post.content?.split(" ").length || 0) / 200)} min read
+          </span>
         </div>
       </div>
+
+      {/* Categories */}
+      {!!post.categories?.length && (
+        <div className="flex justify-center flex-wrap gap-2 mt-4">
+          {post.categories?.map((cat, i) => (
+            <span
+              key={i}
+              className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium"
+            >
+              {cat}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Hero Image */}
       {post.coverUrl && (
@@ -180,7 +218,9 @@ export default function BlogPostPage() {
 
       {/* Description */}
       {post.description && (
-        <p className="text-gray-600 italic text-center mt-6 mb-10 px-4">{post.description}</p>
+        <p className="text-gray-600 italic text-center mt-6 mb-10 px-4">
+          {post.description}
+        </p>
       )}
 
       {/* Blog Content */}
@@ -214,7 +254,10 @@ export default function BlogPostPage() {
 
       {/* Back Button */}
       <div className="mt-10 text-center">
-        <button onClick={() => router.push("/")} className="text-purple-600 hover:underline text-lg">
+        <button
+          onClick={() => router.push("/")}
+          className="text-purple-600 hover:underline text-lg"
+        >
           ← Back to Blogs
         </button>
       </div>
