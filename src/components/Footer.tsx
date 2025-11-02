@@ -18,7 +18,7 @@ export default function Footer() {
           : "bg-white border-gray-300 text-gray-800"
       }`}
     >
-      <div className="max-w-screen-lg mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* ✅ Logo + About */}
         <div className="flex flex-col items-start">
           <Link href="/" className="flex items-center">

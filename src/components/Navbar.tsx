@@ -24,7 +24,7 @@ const Navbar = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch("http://localhost:1337/api/categories");
+        const res = await fetch("https://honorable-breeze-55074c763a.strapiapp.com");
         const data = await res.json();
         setCategories(data.data || []);
       } catch (error) {
@@ -65,7 +65,7 @@ const Navbar = () => {
 
   return (
     <header className="bg-white text-gray-800 dark:bg-gray-900 dark:text-gray-100 border-b border-gray-300 dark:border-gray-700 transition-colors duration-300">
-      <div className="max-w-screen-lg mx-auto flex items-center justify-between p-4">
+      <div className="max-w-5xl mx-auto flex items-center justify-between p-4">
         {/* ✅ Logo (Light/Dark Switch) */}
         <Link href="/" className="flex items-center space-x-2">
           <div
@@ -247,7 +247,7 @@ const Navbar = () => {
             animate={{ opacity: 1, y: 0, height: "auto" }}
             exit={{ opacity: 0, y: -15, height: 0 }}
             transition={{ duration: 0.35, ease: "easeInOut" }}
-            className="max-w-screen-lg mx-auto px-4 overflow-hidden mt-4"
+            className="max-w-5xl mx-auto px-4 overflow-hidden mt-4"
           >
             <form
               onSubmit={handleSearchSubmit}
@@ -279,7 +279,7 @@ const Navbar = () => {
       </AnimatePresence>
 
       {/* ✅ Short (Unfinished) Bottom Line */}
-      <div className="h-[2px] bg-black dark:bg-white w-[80%] mx-auto rounded-full opacity-70"></div>
+      <div className="h-0.5 bg-black dark:bg-white w-[80%] mx-auto rounded-full opacity-70"></div>
     </header>
   );
 };
