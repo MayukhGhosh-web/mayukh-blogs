@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getBlogsBySearch } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get("query") || "";
   const [results, setResults] = useState<any[]>([]);
@@ -17,14 +17,12 @@ export default function SearchPage() {
 
     setLoading(true);
     getBlogsBySearch(query)
-      .then((data) => {
-        setResults(data || []);
-      })
+      .then((data) => setResults(data || []))
       .finally(() => setLoading(false));
   }, [query]);
 
   return (
-    <div className="max-w-screen-md mx-auto p-4">
+    <div className="max-w-3xl mx-auto p-4">
       <motion.h1
         className="text-2xl font-bold text-purple-800 mb-4"
         initial={{ opacity: 0, y: -20 }}
@@ -115,5 +113,13 @@ export default function SearchPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="text-center text-gray-400 p-4">Loading search...</div>}>
+      <SearchContent />
+    </Suspense>
   );
 }

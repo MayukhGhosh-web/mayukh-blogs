@@ -152,7 +152,7 @@ export default function BlogPostPage() {
           className="relative mt-8 w-full h-[420px] rounded-2xl shadow-lg overflow-hidden bg-cover bg-center"
           style={{ backgroundImage: `url(${post.coverUrl})` }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-b from-black/40 via-black/10 to-transparent" />
         </div>
       )}
 

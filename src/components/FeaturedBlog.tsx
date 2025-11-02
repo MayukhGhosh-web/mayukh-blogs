@@ -27,7 +27,7 @@ export default function FeaturedBlog({ post }: FeaturedBlogProps) {
             className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
           />
         )}
-        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-6 md:p-10 text-white">
+        <div className="absolute bottom-0 left-0 w-full bg-linear-to-t from-black/70 to-transparent p-6 md:p-10 text-white">
           <h2 className="text-2xl md:text-4xl font-bold mb-2">{post.title}</h2>
           <p className="text-sm md:text-lg mb-4">{post.description}</p>
           <div>

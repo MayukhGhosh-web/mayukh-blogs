@@ -31,14 +31,10 @@ function HomePageContent() {
         const fetchedPosts: BlogPost[] = json.data.map((item: any) => {
           const attrs = item.attributes || item;
 
-          // ✅ Universal Strapi Cloud / Local fix
-          const coverData =
-            attrs.cover?.data?.attributes ||
-            attrs.cover?.data ||
-            attrs.cover ||
-            null;
-
+          // ✅ Handle Strapi image formats from both local & cloud
           let imageUrl = "";
+          const coverData = attrs.cover?.data?.attributes || attrs.cover?.data || attrs.cover;
+
           if (coverData?.url) {
             imageUrl = coverData.url.startsWith("http")
               ? coverData.url
@@ -55,13 +51,14 @@ function HomePageContent() {
             title: attrs.title,
             description: attrs.description,
             content: attrs.content || "",
-            cover: imageUrl, // ✅ Always a usable string URL
+            cover: imageUrl,
             categories: [],
             author: attrs.author || undefined,
             createdAt: attrs.createdAt || "",
           };
         });
 
+        // Sort and highlight key blogs
         const sortedPosts = fetchedPosts.sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -78,22 +75,11 @@ function HomePageContent() {
           (p) => now - new Date(p.createdAt).getTime() <= oneWeek
         );
 
-        const pickMostEngaging = (arr: BlogPost[]) => {
-          if (arr.length === 0) return null;
-          return arr.sort((a, b) => {
-            const scoreA =
-              (a.description?.length || 0) +
-              (a.title?.split(" ").length || 0) * 5 +
-              Math.random() * 10;
-            const scoreB =
-              (b.description?.length || 0) +
-              (b.title?.split(" ").length || 0) * 5 +
-              Math.random() * 10;
-            return scoreB - scoreA;
-          })[0];
-        };
+        const weekly =
+          recentBlogs.length > 0
+            ? recentBlogs[Math.floor(Math.random() * recentBlogs.length)]
+            : sortedPosts[0];
 
-        const weekly = pickMostEngaging(recentBlogs) || sortedPosts[0];
         setWeeklyHot(weekly);
         setPosts(sortedPosts);
       } catch (err: any) {
@@ -107,6 +93,14 @@ function HomePageContent() {
     fetchBlogs();
   }, []);
 
+  const getCoverUrl = (cover: string | undefined) => {
+    if (!cover) return "/default-thumbnail.jpg";
+    return cover.startsWith("http") ? cover : `${STRAPI_BASE_URL}${cover}`;
+  };
+
+  if (loading) return <Loader />;
+  if (error) return <p className="text-red-500 text-center">Error: {error}</p>;
+
   const remainingPosts = posts.filter(
     (p) => p !== weeklyHot && p !== featuredPost
   );
@@ -117,142 +111,127 @@ function HomePageContent() {
     )
     .slice(0, 5);
 
-  const getCoverUrl = (cover: string | undefined) => {
-    if (!cover) return "/default-thumbnail.jpg";
-    return cover.startsWith("http") ? cover : `${STRAPI_BASE_URL}${cover}`;
-  };
-
   return (
-    <main className="max-w-screen-xl mx-auto p-4">
+    <main className="max-w-7xl mx-auto p-4">
       {featuredPost && <FeaturedBlog post={featuredPost} />}
-      {loading && <Loader />}
-      {error && (
-        <p className="text-red-500 text-center">Error fetching blogs: {error}</p>
-      )}
 
-      {!loading && !error && posts.length > 0 && (
-        <>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
-            {/* 🔥 Weekly Hot */}
-            {weeklyHot && (
-              <Link
-                href={`/blogs/${weeklyHot.slug}`}
-                className="relative block lg:col-span-2 rounded-lg overflow-hidden group shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                {weeklyHot.cover && (
-                  <Image
-                    src={getCoverUrl(weeklyHot.cover as string)}
-                    alt={weeklyHot.title}
-                    width={700}
-                    height={400}
-                    unoptimized
-                    className="w-full h-[350px] object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-                <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-                  <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
-                    🔥 Trending This Week
-                  </span>
-                  <h3 className="font-extrabold text-2xl md:text-3xl mb-1 leading-tight">
-                    {weeklyHot.title}
-                  </h3>
-                  <p className="text-gray-200 line-clamp-8 mb-3 text-sm md:text-base">
-                    {weeklyHot.description}
-                  </p>
-                </div>
-              </Link>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
+        {/* 🔥 Weekly Hot */}
+        {weeklyHot && (
+          <Link
+            href={`/blogs/${weeklyHot.slug}`}
+            className="relative block lg:col-span-2 rounded-lg overflow-hidden group shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            {weeklyHot.cover && (
+              <Image
+                src={getCoverUrl(weeklyHot.cover as string)}
+                alt={weeklyHot.title}
+                width={700}
+                height={400}
+                unoptimized
+                className="w-full h-[350px] object-cover group-hover:scale-105 transition-transform duration-500"
+              />
             )}
-
-            {/* 🧩 Compact Blogs */}
-            <div className="flex flex-col gap-5 lg:col-span-1">
-              {remainingPosts.slice(0, 2).map((p) => (
-                <Link
-                  key={p.slug}
-                  href={`/blogs/${p.slug}`}
-                  className="block border rounded-lg shadow hover:shadow-lg overflow-hidden transition-all duration-300"
-                >
-                  {p.cover && (
-                    <Image
-                      src={getCoverUrl(p.cover as string)}
-                      alt={p.title}
-                      width={400}
-                      height={250}
-                      unoptimized
-                      className="w-full h-40 object-cover"
-                    />
-                  )}
-                  <div className="p-4 bg-white dark:bg-gray-900">
-                    <h3 className="text-gray-900 dark:text-gray-200 text-xl font-semibold">
-                      {p.title}
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400 line-clamp-3 text-sm">
-                      {p.description}
-                    </p>
-                  </div>
-                </Link>
-              ))}
+            <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent"></div>
+            <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+              <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
+                🔥 Trending This Week
+              </span>
+              <h3 className="font-extrabold text-2xl md:text-3xl mb-1 leading-tight">
+                {weeklyHot.title}
+              </h3>
+              <p className="text-gray-200 line-clamp-8 mb-3 text-sm md:text-base">
+                {weeklyHot.description}
+              </p>
             </div>
+          </Link>
+        )}
 
-            {/* 🆕 Newly Added Blogs */}
-            <aside className="bg-black text-white dark:bg-white dark:text-gray-900 rounded-lg shadow-md p-5 max-h-[650px] overflow-y-auto sticky top-[0px] lg:col-span-1">
-              <h2 className="text-2xl font-bold mb-4 text-center border-b border-gray-700 dark:border-gray-300 pb-2">
-                Newly Added Blogs
-              </h2>
-              <div className="space-y-4">
-                {latestBlogs.map((blog, index) => (
-                  <div key={blog.slug}>
-                    <Link
-                      href={`/blogs/${blog.slug}`}
-                      className="block hover:text-yellow-400 dark:hover:text-yellow-600 transition"
-                    >
-                      <h3 className="font-semibold text-lg mb-1">
-                        {blog.title}
-                      </h3>
-                      <p className="text-gray-400 dark:text-gray-600 text-sm line-clamp-2">
-                        {blog.description || "Read more..."}
-                      </p>
-                    </Link>
-                    {index < latestBlogs.length - 1 && (
-                      <hr className="my-3 border-gray-700 dark:border-gray-300" />
-                    )}
-                  </div>
-                ))}
+        {/* 🧩 Compact Blogs */}
+        <div className="flex flex-col gap-5 lg:col-span-1">
+          {remainingPosts.slice(0, 2).map((p) => (
+            <Link
+              key={p.slug}
+              href={`/blogs/${p.slug}`}
+              className="block border rounded-lg shadow hover:shadow-lg overflow-hidden transition-all duration-300"
+            >
+              {p.cover && (
+                <Image
+                  src={getCoverUrl(p.cover as string)}
+                  alt={p.title}
+                  width={400}
+                  height={250}
+                  unoptimized
+                  className="w-full h-40 object-cover"
+                />
+              )}
+              <div className="p-4 bg-white dark:bg-gray-900">
+                <h3 className="text-gray-900 dark:text-gray-200 text-xl font-semibold">
+                  {p.title}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 line-clamp-3 text-sm">
+                  {p.description}
+                </p>
               </div>
-            </aside>
-          </div>
+            </Link>
+          ))}
+        </div>
 
-          {/* 🧾 Remaining Posts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-10 mt-8 auto-rows-fr">
-            {remainingPosts.slice(2).map((p) => (
-              <Link
-                key={p.slug}
-                href={`/blogs/${p.slug}`}
-                className="block flex flex-col w-full gap-2 border rounded-lg shadow hover:shadow-lg overflow-hidden transition-transform hover:-translate-y-1"
-              >
-                {p.cover && (
-                  <Image
-                    src={getCoverUrl(p.cover as string)}
-                    alt={p.title}
-                    width={500}
-                    height={300}
-                    unoptimized
-                    className="w-full h-56 object-cover"
-                  />
-                )}
-                <div className="p-4 bg-white dark:bg-gray-900 flex-1">
-                  <h3 className="text-gray-800 dark:text-gray-200 text-xl font-semibold">
-                    {p.title}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 line-clamp-3">
-                    {p.description}
+        {/* 🆕 Newly Added Blogs */}
+        <aside className="bg-black text-white dark:bg-white dark:text-gray-900 rounded-lg shadow-md p-5 max-h-[650px] overflow-y-auto sticky top-0 lg:col-span-1">
+          <h2 className="text-2xl font-bold mb-4 text-center border-b border-gray-700 dark:border-gray-300 pb-2">
+            Newly Added Blogs
+          </h2>
+          <div className="space-y-4">
+            {latestBlogs.map((blog, index) => (
+              <div key={blog.slug}>
+                <Link
+                  href={`/blogs/${blog.slug}`}
+                  className="block hover:text-yellow-400 dark:hover:text-yellow-600 transition"
+                >
+                  <h3 className="font-semibold text-lg mb-1">{blog.title}</h3>
+                  <p className="text-gray-400 dark:text-gray-600 text-sm line-clamp-2">
+                    {blog.description || "Read more..."}
                   </p>
-                </div>
-              </Link>
+                </Link>
+                {index < latestBlogs.length - 1 && (
+                  <hr className="my-3 border-gray-700 dark:border-gray-300" />
+                )}
+              </div>
             ))}
           </div>
-        </>
-      )}
+        </aside>
+      </div>
+
+      {/* 🧾 Remaining Posts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-10 mt-8 auto-rows-fr">
+        {remainingPosts.slice(2).map((p) => (
+          <Link
+            key={p.slug}
+            href={`/blogs/${p.slug}`}
+            className="flex flex-col w-full gap-2 border rounded-lg shadow hover:shadow-lg overflow-hidden transition-transform hover:-translate-y-1"
+          >
+            {p.cover && (
+              <Image
+                src={getCoverUrl(p.cover as string)}
+                alt={p.title}
+                width={500}
+                height={300}
+                unoptimized
+                className="w-full h-56 object-cover"
+              />
+            )}
+            <div className="p-4 bg-white dark:bg-gray-900 flex-1">
+              <h3 className="text-gray-800 dark:text-gray-200 text-xl font-semibold">
+                {p.title}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 line-clamp-3">
+                {p.description}
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
     </main>
   );
 }
