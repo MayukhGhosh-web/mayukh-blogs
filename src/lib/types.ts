@@ -1,27 +1,61 @@
-// lib/types.ts
+// src/lib/types.ts
 
-// Image interface
-export interface ImageData {
-  url: string;
-  alt?: string; // Optional alt text
+// ✅ Strapi Image interface
+export interface StrapiImage {
+  id?: number;
+  url?: string;
+  documentId?: string;
+  name?: string;
+  alternativeText?: string;
+  caption?: string;
+  width?: number;
+  height?: number;
+  formats?: {
+    thumbnail?: {
+      url?: string;
+      width?: number;
+      height?: number;
+    };
+    small?: {
+      url?: string;
+      width?: number;
+      height?: number;
+    };
+    medium?: {
+      url?: string;
+      width?: number;
+      height?: number;
+    };
+    large?: {
+      url?: string;
+      width?: number;
+      height?: number;
+    };
+  };
 }
 
-// Author interface
+// ✅ Image interface (for optional author avatar)
+export interface ImageData {
+  url: string;
+  alt?: string;
+}
+
+// ✅ Author interface
 export interface Author {
   id: number;
   name: string;
   email?: string;
-  avatar?: ImageData; // optional
+  avatar?: ImageData;
 }
 
-// Category interface
+// ✅ Category interface
 export interface Category {
-  id: number; // Strapi returns numeric IDs
+  id: number;
   name: string;
   description?: string;
 }
 
-// Blog post interface
+// ✅ Blog Post interface
 export interface BlogPost {
   id: number;
   title: string;
@@ -29,12 +63,12 @@ export interface BlogPost {
   description: string;
   content: string;
   createdAt: string;
-  cover?: string; // optional
-  author?: Author;   // optional
-  categories?: Category[]; // optional
+  cover?: StrapiImage | string; // ✅ Handles both cases (URL string or Strapi object)
+  author?: Author;
+  categories?: Category[];
 }
 
-// For creating a post (client-side)
+// ✅ Client-side blog post data
 export interface UserBlogPostData {
   title: string;
   slug: string;
@@ -42,7 +76,7 @@ export interface UserBlogPostData {
   content: string;
 }
 
-// Response types
+// ✅ API response types
 export interface BlogPostResponse {
   data: BlogPost[];
 }

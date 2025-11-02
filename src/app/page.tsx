@@ -21,7 +21,9 @@ function HomePageContent() {
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const res = await fetch(`${STRAPI_BASE_URL}/api/blogs?populate=cover`);
+        const res = await fetch(
+          `${STRAPI_BASE_URL}/api/blogs?populate=cover&sort=createdAt:desc`
+        );
         const json = await res.json();
 
         if (!json?.data) throw new Error("No blogs found");
@@ -29,13 +31,23 @@ function HomePageContent() {
         const fetchedPosts: BlogPost[] = json.data.map((item: any) => {
           const attrs = item.attributes || item;
 
-          // ✅ FIXED IMAGE URL LOGIC — Works for both Strapi Cloud & local
-          const rawUrl = attrs.cover?.data?.attributes?.url;
-          const imageUrl = rawUrl
-            ? rawUrl.startsWith("http")
-              ? rawUrl
-              : `${STRAPI_BASE_URL}${rawUrl}`
-            : "";
+          // ✅ Universal Strapi Cloud / Local fix
+          const coverData =
+            attrs.cover?.data?.attributes ||
+            attrs.cover?.data ||
+            attrs.cover ||
+            null;
+
+          let imageUrl = "";
+          if (coverData?.url) {
+            imageUrl = coverData.url.startsWith("http")
+              ? coverData.url
+              : `${STRAPI_BASE_URL}${coverData.url}`;
+          } else if (typeof attrs.cover === "string") {
+            imageUrl = attrs.cover.startsWith("http")
+              ? attrs.cover
+              : `${STRAPI_BASE_URL}${attrs.cover}`;
+          }
 
           return {
             id: item.id,
@@ -43,7 +55,7 @@ function HomePageContent() {
             title: attrs.title,
             description: attrs.description,
             content: attrs.content || "",
-            cover: imageUrl,
+            cover: imageUrl, // ✅ Always a usable string URL
             categories: [],
             author: attrs.author || undefined,
             createdAt: attrs.createdAt || "",
@@ -85,6 +97,7 @@ function HomePageContent() {
         setWeeklyHot(weekly);
         setPosts(sortedPosts);
       } catch (err: any) {
+        console.error("Fetch error:", err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -103,6 +116,11 @@ function HomePageContent() {
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
     .slice(0, 5);
+
+  const getCoverUrl = (cover: string | undefined) => {
+    if (!cover) return "/default-thumbnail.jpg";
+    return cover.startsWith("http") ? cover : `${STRAPI_BASE_URL}${cover}`;
+  };
 
   return (
     <main className="max-w-screen-xl mx-auto p-4">
@@ -123,7 +141,7 @@ function HomePageContent() {
               >
                 {weeklyHot.cover && (
                   <Image
-                    src={weeklyHot.cover}
+                    src={getCoverUrl(weeklyHot.cover as string)}
                     alt={weeklyHot.title}
                     width={700}
                     height={400}
@@ -131,9 +149,9 @@ function HomePageContent() {
                     className="w-full h-[350px] object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent dark:from-gray-900/90 dark:via-gray-800/60 dark:to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-                  <span className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black text-xs font-bold px-2 py-1 rounded">
+                  <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
                     🔥 Trending This Week
                   </span>
                   <h3 className="font-extrabold text-2xl md:text-3xl mb-1 leading-tight">
@@ -156,7 +174,7 @@ function HomePageContent() {
                 >
                   {p.cover && (
                     <Image
-                      src={p.cover}
+                      src={getCoverUrl(p.cover as string)}
                       alt={p.title}
                       width={400}
                       height={250}
@@ -214,7 +232,7 @@ function HomePageContent() {
               >
                 {p.cover && (
                   <Image
-                    src={p.cover}
+                    src={getCoverUrl(p.cover as string)}
                     alt={p.title}
                     width={500}
                     height={300}
