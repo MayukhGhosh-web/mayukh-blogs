@@ -35,16 +35,22 @@ const CategoryPage: React.FC = () => {
   const [categoryName, setCategoryName] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
+  // ✅ Always use environment-based backend URL
+  const STRAPI_URL =
+    process.env.NEXT_PUBLIC_STRAPI_URL ||
+    "https://honorable-breeze-55074c763a.strapiapp.com";
+
   useEffect(() => {
     if (!slug) return;
 
     const fetchCategoryBlogs = async () => {
       try {
         const res = await fetch(
-          `http://localhost:1337/api/categories?filters[slug][$eq]=${slug}&populate[blogs][populate]=cover`
+          `${STRAPI_URL}/api/categories?filters[slug][$eq]=${slug}&populate[blogs][populate]=cover`,
+          { next: { revalidate: 60 } } // cache hint
         );
-        const json = await res.json();
 
+        const json = await res.json();
         const categoryData = json.data?.[0];
 
         if (categoryData) {
@@ -68,7 +74,7 @@ const CategoryPage: React.FC = () => {
     };
 
     fetchCategoryBlogs();
-  }, [slug]);
+  }, [slug, STRAPI_URL]);
 
   if (loading) {
     return (
@@ -97,7 +103,7 @@ const CategoryPage: React.FC = () => {
         <h1
           className="text-5xl font-extrabold text-center mb-12 tracking-widest"
           style={{
-            color: theme === "dark" ? "#FFD580" : "#B87333", // Copper gold vs soft gold
+            color: theme === "dark" ? "#FFD580" : "#B87333",
             textTransform: "uppercase",
             fontFamily: "'Playfair Display', serif",
             letterSpacing: "0.15em",
@@ -112,12 +118,12 @@ const CategoryPage: React.FC = () => {
             const attrs = (blog.attributes ?? blog) as any;
             const key = blog.id ?? attrs.slug ?? Math.random().toString(36).slice(2, 9);
 
-            const coverUrl =
-              attrs?.cover?.data?.attributes?.url
-                ? `${process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337"}${attrs.cover.data.attributes.url}`
-                : attrs?.cover?.url
-                ? `${process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337"}${attrs.cover.url}`
-                : null;
+            // ✅ Fixed image URL construction
+            const coverPath =
+              attrs?.cover?.data?.attributes?.url || attrs?.cover?.url || "";
+            const coverUrl = coverPath
+              ? `${STRAPI_URL}${coverPath}`
+              : null;
 
             const title = attrs?.title ?? "Untitled Blog";
             const slugToUse = attrs?.slug ?? "";
