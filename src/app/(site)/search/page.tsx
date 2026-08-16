@@ -90,9 +90,9 @@ function SearchContent() {
                   href={`/blogs/${post.slug}`}
                   className="flex gap-4 p-4 border border-purple-700 rounded hover:bg-purple-900 transition"
                 >
-                  {post.cover?.url && (
+                  {post.cover && (
                     <motion.img
-                      src={`${process.env.NEXT_PUBLIC_STRAPI_URL}${post.cover.url}`}
+                      src={post.cover}
                       alt={post.title}
                       className="w-24 h-24 object-cover rounded"
                       initial={{ opacity: 0, scale: 0.95 }}

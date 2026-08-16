@@ -8,8 +8,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useTheme } from "@/components/ui/ThemeContext";
-
-const STRAPI_BASE_URL = "https://honorable-breeze-55074c763a.strapiapp.com";
+import { getAllCategories } from "@/lib/api";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -21,18 +20,12 @@ const Navbar = () => {
   const { theme } = useTheme();
   const categoryRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Fetch categories from Strapi
+  // ✅ Fetch categories from Sanity
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch(`${STRAPI_BASE_URL}/api/categories?populate=*`, {
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-
-        const data = await res.json();
-        setCategories(data.data || []);
+        const data = await getAllCategories();
+        setCategories(data || []);
       } catch (error) {
         console.error("Error fetching categories:", error);
         setCategories([]); // fallback
@@ -125,15 +118,14 @@ const Navbar = () => {
                 >
                   {categories && categories.length > 0 ? (
                     categories.map((cat) => {
-                      const attrs = cat.attributes ?? cat;
                       return (
                         <Link
-                          key={cat.id ?? attrs.slug}
-                          href={`/categories/${attrs.slug}`}
+                          key={cat.id ?? cat.slug}
+                          href={`/categories/${cat.slug}`}
                           onClick={() => setCategoryOpen(false)}
                           className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
-                          {attrs.name}
+                          {cat.name}
                         </Link>
                       );
                     })
@@ -209,18 +201,17 @@ const Navbar = () => {
                   >
                     {categories.length > 0 ? (
                       categories.map((cat) => {
-                        const attrs = cat.attributes ?? cat;
                         return (
                           <Link
-                            key={cat.id ?? attrs.slug}
-                            href={`/categories/${attrs.slug}`}
+                            key={cat.id ?? cat.slug}
+                            href={`/categories/${cat.slug}`}
                             onClick={() => {
                               setMenuOpen(false);
                               setCategoryOpen(false);
                             }}
                             className="hover:text-red-400 transition-colors"
                           >
-                            {attrs.name}
+                            {cat.name}
                           </Link>
                         );
                       })

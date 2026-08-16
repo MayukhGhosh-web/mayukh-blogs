@@ -1,17 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "@/components/ui/ThemeContext";
+import { getCategoryWithPosts } from "@/lib/api";
 
 interface BlogPost {
   id?: number | string;
   title?: string;
   slug?: string;
   description?: string;
-  cover?: { url?: string };
+  cover?: string;
 }
 
 const CategoryPage: React.FC = () => {
@@ -21,54 +22,21 @@ const CategoryPage: React.FC = () => {
   const [categoryName, setCategoryName] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
-  const STRAPI_URL =
-    process.env.NEXT_PUBLIC_STRAPI_URL ||
-    "https://honorable-breeze-55074c763a.strapiapp.com";
-
   useEffect(() => {
     if (!slug) return;
 
     const fetchCategoryBlogs = async () => {
       try {
-        // ✅ Populate blogs and their cover images
-        const apiUrl = `${STRAPI_URL.replace(
-          /\/$/,
-          ""
-        )}/api/categories?filters[slug][$eq]=${slug}&populate[blogs][populate][0]=cover`;
+        const result = await getCategoryWithPosts(slug as string);
 
-        console.log("Fetching:", apiUrl);
-
-        const response = await fetch(apiUrl, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          cache: "no-store",
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const json = await response.json();
-        console.log("Category response:", json);
-
-        const categoryData = json?.data?.[0];
-
-        if (!categoryData) {
+        if (!result) {
           setCategoryName("Category not found");
           setBlogs([]);
           return;
         }
 
-        setCategoryName(categoryData.name ?? "Untitled Category");
-
-        // ✅ Extract blogs safely
-        const blogsData = Array.isArray(categoryData.blogs)
-          ? categoryData.blogs
-          : [];
-
-        setBlogs(blogsData);
+        setCategoryName(result.name ?? "Untitled Category");
+        setBlogs(result.blogs ?? []);
       } catch (error) {
         console.error("Error fetching category blogs:", error);
         setCategoryName("Error loading category");
@@ -125,13 +93,9 @@ const CategoryPage: React.FC = () => {
             const slugToUse = blog.slug ?? "";
             const description = blog.description ?? "Read more...";
 
-            const rawUrl = blog.cover?.url || "";
+            const rawUrl = blog.cover || "";
             const coverUrl =
-              rawUrl && rawUrl.startsWith("http")
-                ? rawUrl
-                : rawUrl
-                ? `${STRAPI_URL.replace(/\/$/, "")}${rawUrl}`
-                : "";
+              rawUrl && rawUrl.startsWith("http") ? rawUrl : "";
 
             return (
               <Link

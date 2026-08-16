@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { getPostBySlug } from "@/lib/api";
 import Loader from "@/components/Loader";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -42,60 +43,22 @@ export default function BlogPostPage() {
       setError(null);
 
       try {
-        const base =
-          process.env.NEXT_PUBLIC_STRAPI_URL ||
-          "https://honorable-breeze-55074c763a.strapiapp.com";
+        const blog = await getPostBySlug(slug as string);
 
-        const res = await fetch(`${base}/api/blogs?populate=*`, {
-          cache: "no-store",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!res.ok) throw new Error(`Fetch failed: ${res.status} ${res.statusText}`);
-        const json = await res.json();
-
-        let raw: any | null = null;
-
-        if (Array.isArray(json?.data)) {
-          const found = json.data.find((item: any) => {
-            const attrs = item?.attributes ?? item;
-            return attrs?.slug === slug;
-          });
-          if (found) raw = found.attributes ?? found;
-        }
-
-        if (!raw) {
+        if (!blog) {
           setError("Post not found");
           setPost(null);
           return;
         }
 
-        const coverUrlRaw =
-          raw.cover?.data?.attributes?.url ?? raw.cover?.url ?? raw.coverUrl;
-        const coverUrl =
-          coverUrlRaw && typeof coverUrlRaw === "string"
-            ? coverUrlRaw.startsWith("http")
-              ? coverUrlRaw
-              : `${base}${coverUrlRaw}`
-            : undefined;
-
-        let categories: string[] | undefined;
-        if (Array.isArray(raw.categories?.data)) {
-          categories = raw.categories.data.map(
-            (c: any) => c.attributes?.name ?? c.name
-          );
-        }
-
         const normalized: BlogPost = {
-          title: raw.title ?? "",
-          slug: raw.slug ?? "",
-          description: raw.description ?? "",
-          content: raw.content ?? "",
-          createdAt: raw.createdAt,
-          coverUrl,
-          categories,
+          title: blog.title ?? "",
+          slug: blog.slug ?? "",
+          description: blog.description ?? "",
+          content: blog.content ?? "",
+          createdAt: blog.createdAt,
+          coverUrl: blog.cover,
+          categories: blog.categories?.map((c) => c.name) ?? [],
         };
 
         setPost(normalized);

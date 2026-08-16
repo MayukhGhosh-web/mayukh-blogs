@@ -9,13 +9,9 @@ interface FeaturedBlogProps {
 export default function FeaturedBlog({ post }: FeaturedBlogProps) {
   if (!post) return null;
 
-  // If cover is a string, handle full URL or relative path
+  // Cover is always an absolute URL from Sanity
   const coverUrl =
-    typeof post.cover === "string"
-      ? post.cover.startsWith("http")
-        ? post.cover
-        : `${process.env.NEXT_PUBLIC_STRAPI_URL}${post.cover}`
-      : null;
+    post.cover && post.cover.startsWith("http") ? post.cover : null;
 
   return (
     <Link href={`/blogs/${post.slug}`}>

@@ -1,89 +1,78 @@
-// lib/api.ts
-import axios from "axios";
-import { UserBlogPostData } from "./types";
-import type { BlogPost } from "./types";
+// lib/api.ts — Sanity-backed data layer (migrated from Strapi REST)
+import { client } from "@/sanity/lib/client";
+import type { BlogPost, Category } from "./types";
 
-// --- Utility Functions for Strapi Data Transformation ---
-const mapStrapiItemToBlogPost = (item: any): BlogPost => {
-  if (!item || !item.attributes) {
-    throw new Error("Invalid Strapi item structure for mapping.");
-  }
-  const attrs = item.attributes;
+const PAGE_LIMIT = Number(process.env.NEXT_PUBLIC_PAGE_LIMIT) || 10;
 
-  return {
-    id: item.id,
-    slug: attrs.slug,
-    title: attrs.title,
-    description: attrs.description,
-    content: attrs.content || null,
-    cover: attrs.cover?.data || null,
-    categories: attrs.categories?.data || [],
-    author: attrs.author?.data || null,
-    createdAt: attrs.createdAt,
-  } as BlogPost;
-};
+// Shared projection for post documents
+const POST_PROJECTION = `{
+  _id,
+  title,
+  "slug": slug.current,
+  description,
+  content,
+  publishedAt,
+  "createdAt": coalesce(publishedAt, _createdAt),
+  "cover": mainImage.asset->url,
+  "categories": categories[]->{ _id, "name": title, "slug": slug.current },
+  "author": author->{ _id, name, email }
+}`;
 
-// --- API Client Setup ---
-export const api: any = axios.create({
-  baseURL:
-    process.env.NEXT_PUBLIC_STRAPI_URL ||
-    "https://honorable-breeze-55074c763a.strapiapp.com",
+const mapSanityPost = (doc: any): BlogPost => ({
+  id: doc._id,
+  slug: doc.slug ?? "",
+  title: doc.title ?? "",
+  description: doc.description ?? "",
+  content: doc.content ?? "",
+  cover: doc.cover,
+  categories: doc.categories ?? [],
+  author: doc.author ?? null,
+  createdAt: doc.createdAt ?? "",
 });
 
-// ------------------------------------------------------------------
-// 🚀 API Endpoints
-// ------------------------------------------------------------------
+// Sanitize a user search term into a GROQ `match` pattern (contains-style, case-insensitive)
+const toMatchPattern = (query: string) =>
+  `*${query.replace(/[*]/g, "").trim()}*`;
+
+const postFilter = (searchQuery: string) =>
+  searchQuery
+    ? `&& (title match "${toMatchPattern(searchQuery)}" || description match "${toMatchPattern(searchQuery)}")`
+    : "";
 
 // ✅ Fetch all posts with pagination and optional search
-export const getAllPosts = async (page = 1, searchQuery = "") => {
-  try {
-    const populateQuery =
-      "populate[0]=cover&populate[1]=categories&populate[2]=author";
-    const searchFilter = searchQuery
-      ? `&filters[title][$containsi]=${encodeURIComponent(searchQuery)}`
-      : "";
+export const getAllPosts = async (page = 1, searchQuery = "", pageSize?: number) => {
+  const limit = pageSize ?? PAGE_LIMIT;
+  const start = (page - 1) * limit;
+  const end = start + limit;
+  const filter = postFilter(searchQuery);
 
-    const response = await api.get(
-      `/api/blogs?${populateQuery}&pagination[page]=${page}&pagination[pageSize]=${
-        process.env.NEXT_PUBLIC_PAGE_LIMIT || 10
-      }${searchFilter}`
-    );
+  const query = `*[_type == "post" ${filter}] | order(coalesce(publishedAt, _createdAt) desc)[$start...$end] ${POST_PROJECTION}`;
+  const countQuery = `count(*[_type == "post" ${filter}])`;
 
-    const mappedPosts = response.data.data.map(mapStrapiItemToBlogPost);
+  const [posts, total] = await Promise.all([
+    client.fetch(query, { start, end }).then((rows: any[]) => rows.map(mapSanityPost)),
+    client.fetch(countQuery),
+  ]);
 
-    return {
-      posts: mappedPosts,
-      pagination: response.data.meta?.pagination,
-    };
-  } catch (error) {
-    console.error("Error fetching blogs:", error);
-    throw new Error("Failed to fetch blog posts.");
-  }
+  return {
+    posts: posts.map(mapSanityPost),
+    pagination: {
+      page,
+      pageSize: limit,
+      pageCount: Math.max(1, Math.ceil(total / limit)),
+      total,
+    },
+  };
 };
 
 // ✅ Fetch single post by slug
 export const getPostBySlug = async (slug: string): Promise<BlogPost | null> => {
   try {
-    const response = await api.get(`/api/blogs`, {
-      params: {
-        filters: {
-          slug: { $eq: slug },
-        },
-        populate: {
-          cover: true,
-          categories: true,
-          author: true,
-        },
-      },
-    });
-
-    const data = response.data;
-    if (!data || !data.data || data.data.length === 0) {
-      throw new Error("Post not found");
-    }
-
-    const item = data.data[0];
-    return mapStrapiItemToBlogPost(item);
+    const doc = await client.fetch(
+      `*[_type == "post" && slug.current == $slug][0] ${POST_PROJECTION}`,
+      { slug }
+    );
+    return doc ? mapSanityPost(doc) : null;
   } catch (err) {
     console.error("Error fetching post:", err);
     return null;
@@ -92,49 +81,52 @@ export const getPostBySlug = async (slug: string): Promise<BlogPost | null> => {
 
 // ✅ Fetch all categories
 export const getAllCategories = async () => {
-  try {
-    const response = await api.get(`/api/categories`);
-    return response.data.data.map((item: any) => ({
-      id: item.id,
-      name: item.attributes.name,
-      slug: item.attributes.slug,
-    }));
-  } catch (error) {
-    console.error("Error fetching categories:", error);
-    throw new Error("Failed to fetch categories.");
-  }
+  const docs = await client.fetch(
+    `*[_type == "category"] | order(title asc) { _id, "name": title, "slug": slug.current, description }`
+  );
+  return docs.map((item: any) => ({
+    id: item._id,
+    name: item.name,
+    slug: item.slug,
+    description: item.description,
+  }));
 };
 
-// ✅ Upload cover image
-export const uploadImage = async (image: File, refId: number) => {
-  try {
-    const formData = new FormData();
-    formData.append("files", image);
-    formData.append("ref", "api::blog.blog");
-    formData.append("refId", refId.toString());
-    formData.append("field", "cover");
+// ✅ Fetch a category by slug with its posts
+export const getCategoryWithPosts = async (slug: string) => {
+  const result = await client.fetch(
+    `*[_type == "category" && slug.current == $slug][0] {
+      _id,
+      "name": title,
+      "slug": slug.current,
+      description,
+      "blogs": *[_type == "post" && references(^._id)] | order(coalesce(publishedAt, _createdAt) desc) {
+        _id,
+        title,
+        "slug": slug.current,
+        description,
+        "createdAt": coalesce(publishedAt, _createdAt),
+        "cover": mainImage.asset->url
+      }
+    }`,
+    { slug }
+  );
 
-    const response = await api.post(`/api/upload`, formData);
-    return response.data[0];
-  } catch (err) {
-    console.error("Error uploading image:", err);
-    throw err;
-  }
+  if (!result) return null;
+
+  return {
+    name: result.name,
+    blogs: (result.blogs ?? []).map((b: any) => ({
+      id: b._id,
+      title: b.title,
+      slug: b.slug,
+      description: b.description,
+      cover: b.cover,
+    })),
+  };
 };
 
-// ✅ Create new blog post
-export const createPost = async (postData: UserBlogPostData) => {
-  try {
-    const reqData = { data: { ...postData } };
-    const response = await api.post(`/api/blogs`, reqData);
-    return mapStrapiItemToBlogPost(response.data.data);
-  } catch (error) {
-    console.error("Error creating post:", error);
-    throw new Error("Failed to create post");
-  }
-};
-
-// ✅ FIXED: Search blogs by title (for search page)
+// ✅ Search blogs by title/description (for search page)
 export async function getBlogsBySearch(query: string): Promise<BlogPost[]> {
   try {
     const { posts } = await getAllPosts(1, query);

@@ -1,11 +1,6 @@
 // app/layout.tsx
 import type { Metadata } from "next";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import localFont from "next/font/local";
-import { Toaster } from "react-hot-toast";
-import ApolloWrapper from "@/components/ApolloWrapper";
-import { ThemeProvider } from "@/components/ui/ThemeContext"; // ✅ import ThemeProvider
 import "./globals.css";
 
 // ✅ Custom local fonts (optional)
@@ -39,17 +34,9 @@ export default function RootLayout({
       </head>
 
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen transition-colors duration-500 bg-white text-black dark:bg-gray-950 dark:text-white`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* ✅ Wrap everything inside ThemeProvider */}
-        <ThemeProvider>
-          <ApolloWrapper>
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
-            <Toaster position="top-right" reverseOrder={false} />
-          </ApolloWrapper>
-        </ThemeProvider>
+        {children}
       </body>
     </html>
   );

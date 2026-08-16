@@ -4,12 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { BlogPost } from "@/lib/types";
+import { getAllPosts } from "@/lib/api";
 import Loader from "@/components/Loader";
 import FeaturedBlog from "@/components/FeaturedBlog";
-
-const STRAPI_BASE_URL =
-  process.env.NEXT_PUBLIC_STRAPI_URL ||
-  "https://honorable-breeze-55074c763a.strapiapp.com";
 
 function HomePageContent() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -21,42 +18,7 @@ function HomePageContent() {
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const res = await fetch(
-          `${STRAPI_BASE_URL}/api/blogs?populate=cover&sort=createdAt:desc`
-        );
-        const json = await res.json();
-
-        if (!json?.data) throw new Error("No blogs found");
-
-        const fetchedPosts: BlogPost[] = json.data.map((item: any) => {
-          const attrs = item.attributes || item;
-
-          // ✅ Handle Strapi image formats from both local & cloud
-          let imageUrl = "";
-          const coverData = attrs.cover?.data?.attributes || attrs.cover?.data || attrs.cover;
-
-          if (coverData?.url) {
-            imageUrl = coverData.url.startsWith("http")
-              ? coverData.url
-              : `${STRAPI_BASE_URL}${coverData.url}`;
-          } else if (typeof attrs.cover === "string") {
-            imageUrl = attrs.cover.startsWith("http")
-              ? attrs.cover
-              : `${STRAPI_BASE_URL}${attrs.cover}`;
-          }
-
-          return {
-            id: item.id,
-            slug: attrs.slug,
-            title: attrs.title,
-            description: attrs.description,
-            content: attrs.content || "",
-            cover: imageUrl,
-            categories: [],
-            author: attrs.author || undefined,
-            createdAt: attrs.createdAt || "",
-          };
-        });
+        const { posts: fetchedPosts } = await getAllPosts(1, "", 100);
 
         // Sort and highlight key blogs
         const sortedPosts = fetchedPosts.sort(
@@ -94,8 +56,8 @@ function HomePageContent() {
   }, []);
 
   const getCoverUrl = (cover: string | undefined) => {
-    if (!cover) return "/default-thumbnail.jpg";
-    return cover.startsWith("http") ? cover : `${STRAPI_BASE_URL}${cover}`;
+    if (!cover || !cover.startsWith("http")) return "/default-thumbnail.jpg";
+    return cover;
   };
 
   if (loading) return <Loader />;
