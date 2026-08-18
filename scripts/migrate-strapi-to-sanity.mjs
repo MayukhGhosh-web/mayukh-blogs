@@ -129,7 +129,15 @@ async function main() {
       content: b.content || '',
       publishedAt: b.publishedAt || b.createdAt,
       ...(mainImage ? { mainImage } : {}),
-      ...(categoryIds.length ? { categories: categoryIds.map((_ref) => ({ _type: 'reference', _ref })) } : {}),
+      ...(categoryIds.length
+        ? {
+            categories: categoryIds.map((_ref) => ({
+              _key: _ref,
+              _type: 'reference',
+              _ref,
+            })),
+          }
+        : {}),
       ...(authorId ? { author: { _type: 'reference', _ref: authorId } } : {}),
     }
     await client.createOrReplace(doc)
